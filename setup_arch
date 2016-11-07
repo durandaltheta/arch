@@ -5,6 +5,7 @@ USAGE( )
    echo "   -u|--user [username]"
    echo "   -p|--pass [password]"
    echo "   -i|--interface [network interface]"
+   echo ""
 }
 
 if [ "$EUID" -ne 0 ];
@@ -19,6 +20,8 @@ do
 key="$1"
 
 case $key in 
+   -b|--basic)
+   BASIC="TRUE"
    -u|--user)
    USER="$2"
    shift
@@ -88,75 +91,77 @@ fi
 #**************************************************************
 # SETUP BASIC ENVIRONMENT
 #
-#dhcpcd "$INTERFACE"
+if [ "$BASIC" == "TRUE" ]; then
+   echo "setting up basic evironment"
+   dhcpcd "$INTERFACE"
 
-systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
+   systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
 
-# setup user
-$INSTALL sudo
-useradd -m -G wheel -s /bin/bash "$USER"
-echo '"$USER":"$PASS"' | chpasswd
-"$USER" ALL=(ALL) ALL
-
-
-# install basic usability packages
-$INSTALL chromium # chrome base browser
-$INSTALL gcc # c/c++ compiler
-$INSTALL make # basic build system 
-$INSTALL vim
-$INSTALL git 
+   echo "setting up user"
+   $INSTALL sudo
+   useradd -m -G wheel -s /bin/bash "$USER"
+   echo '"$USER":"$PASS"' | chpasswd
+   "$USER" ALL=(ALL) ALL
 
 
-# configure environment
-git clone https://github.com/durandaltheta/vim
-/home/$USER/vim/vimfiles/install.sh # install custom vim settings
-echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+   echo "install basic usability packages"
+   $INSTALL chromium # chrome base browser
+   $INSTALL gcc # c/c++ compiler
+   $INSTALL make # basic build system 
+   $INSTALL vim
+   #$INSTALL git # we assume this
 
-# setup VBox guest PACKAGES
-if [ "$VBOX" == "TRUE" ]; then
-   pacman -S virtualbox-guest-utils
-   pacman -S virtualbox-guest-modules-arch 
-   systemctl enable vboxservice.service
-fi 
 
-if [ "$VGA" == "intel" ]; then
-   $INSTALL xf86-video-intel
-elif [ "$VGA" == "nvidia" ]; then
-   $INSTALL nvidia
-elif [ "$VGA" == "amd" ]; then
-   $INSTALL xf86-video-amdgpu
-   $INSTALL xf86-video-ati
+   echo "setting up configure environment"
+   git clone https://github.com/durandaltheta/vim
+   /home/$USER/vim/vimfiles/install.sh # install custom vim settings
+   echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+
+   echo "setting up VBox guest PACKAGES"
+   if [ "$VBOX" == "TRUE" ]; then
+      pacman -S virtualbox-guest-utils
+      pacman -S virtualbox-guest-modules-arch 
+      systemctl enable vboxservice.service
+   fi 
+
+   echo "setting up graphics drivers"
+   if [ "$VGA" == "intel" ]; then
+      $INSTALL xf86-video-intel
+   elif [ "$VGA" == "nvidia" ]; then
+      $INSTALL nvidia
+   elif [ "$VGA" == "amd" ]; then
+      $INSTALL xf86-video-amdgpu
+      $INSTALL xf86-video-ati
+   fi
+
+
+   echo "setting up gui"
+   $INSTALL xorg
+   $INSTALL lxsession
+   $INSTALL openbox
+   $INSTALL xorg-xinit 
+   $INSTALL xorg-server # not sure if necessary
+   $INSTALL xorg-drivers # bonus video drivers
+   $INSTALL lxqt # desktop environment
+   $INSTALL slim # desktop manager
+   $INSTALL slim-themes # additional themes for SLiM
+   sudo pacman -S hwinfo
+
+   systemctl enable slim.service #enables slim at boot
+
+   sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
+
+   echo "#!/bin/bash " >> ~/.xinitrc
+
+   echo "if [ -d /etc/X11/xinit/xinitrc ]; then" >> ~/.xinitrc
+   echo '   for f in /etc/X11/xinit/xinitrc.d/*; do' >> ~/.xinitrc
+   echo '      [ -x "$f" ] && . "$f"' >> ~/.xinitrc
+   echo '   done' >> ~/.xinitrc
+   echo '   unset f' >> ~/.xinitrc
+   echo "fi" >> ~/.xinitrc
+
+   echo "exec startlxqt" >> ~/.xinitrc 
 fi
-
-# configure graphics drivers 
-
-# setup gui
-$INSTALL xorg
-$INSTALL lxsession
-$INSTALL openbox
-$INSTALL xorg-xinit 
-$INSTALL xorg-server # not sure if necessary
-$INSTALL xorg-drivers # bonus video drivers
-$INSTALL lxqt # desktop environment
-$INSTALL slim # desktop manager
-$INSTALL slim-themes # additional themes for SLiM
-sudo pacman -S hwinfo
-
-systemctl enable slim.service #enables slim at boot
-
-sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
-
-echo "#!/bin/bash " >> ~/.xinitrc
-
-echo "if [ -d /etc/X11/xinit/xinitrc ]; then" >> ~/.xinitrc
-echo '   for f in /etc/X11/xinit/xinitrc.d/*; do' >> ~/.xinitrc
-echo '      [ -x "$f" ] && . "$f"' >> ~/.xinitrc
-echo '   done' >> ~/.xinitrc
-echo '   unset f' >> ~/.xinitrc
-echo "fi" >> ~/.xinitrc
-
-echo "exec startlxqt" >> ~/.xinitrc 
-
 
 
 #**************************************************************
