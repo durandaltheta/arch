@@ -80,7 +80,7 @@ then
    exit
 fi
 
-if [ "$INTERFACE" -z ];
+if [ -z "$INTERFACE" ];
 then
    echo "must provide network interface"
    echo "Use the command 'ip link' (without quotes) to list available interfaces."
