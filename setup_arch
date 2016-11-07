@@ -1,0 +1,191 @@
+#!/bin/bash
+USAGE( )
+{
+   echo "$0 valid arguments"
+   echo "   -u|--user [username]"
+   echo "   -p|--pass [password]"
+   echo "   -i|--interface [network interface]"
+}
+
+if [ "$EUID" -ne 0 ];
+then 
+   echo "Please run as root"
+   exit
+fi
+
+# parse arguments and setup variables
+while [[ $# -gt 1 ]]
+do
+key="$1"
+
+case $key in 
+   -u|--user)
+   USER="$2"
+   shift
+   ;;
+   -p|--pass)
+   PASS="$2"
+   shift
+   ;;
+   -i|--interface)
+   INTERFACE="$2"
+   shift
+   ;;
+   --gnome)
+   GNOME_YES="$2"
+   shift
+   ;;
+   --gnome_extras)
+   GNOME_EXTRAS_YES="$2"
+   shift
+   ;;
+   --wine)
+   WINE="TRUE"
+   ;;
+   -v|--vga) # set graphics driver
+   if [ -z "$VGA" ]; then
+      VGA="$2"
+   fi
+   shift
+   ;;
+   --guest) # configure as a virtual machine (vbox) guest
+   VBOX="TRUE"
+   ;;
+   *)
+   echo "Invalid argument ""$2"
+   ;;
+esac
+done
+
+INSTALL_ARGS="-S --noconfirm"
+INSTALL="pacman "$INSTALL_ARGS
+
+
+
+# Error checking
+if [ -z "$USER" ];
+then
+   echo "must provide username"
+   USAGE
+   exit
+fi
+
+if [ -z "$PASS" ];
+then
+   echo "must provide password"
+   USAGE
+   exit
+fi
+
+if [ "$INTERFACE" -z ];
+then
+   echo "must provide network interface"
+   echo "Use the command 'ip link' (without quotes) to list available interfaces."
+   USAGE
+   exit
+fi 
+
+#**************************************************************
+# SETUP BASIC ENVIRONMENT
+#
+#dhcpcd "$INTERFACE"
+
+systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
+
+# setup user
+$INSTALL sudo
+useradd -m -G wheel -s /bin/bash "$USER"
+echo '"$USER":"$PASS"' | chpasswd
+"$USER" ALL=(ALL) ALL
+
+
+# install basic usability packages
+$INSTALL chromium # chrome base browser
+$INSTALL gcc # c/c++ compiler
+$INSTALL make # basic build system 
+$INSTALL vim
+$INSTALL git 
+
+
+# configure environment
+git clone https://github.com/durandaltheta/vim
+/home/$USER/vim/vimfiles/install.sh # install custom vim settings
+echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+
+# setup VBox guest PACKAGES
+if [ "$VBOX" == "TRUE" ]; then
+   pacman -S virtualbox-guest-utils
+   pacman -S virtualbox-guest-modules-arch 
+   systemctl enable vboxservice.service
+fi 
+
+if [ "$VGA" == "intel" ]; then
+   $INSTALL xf86-video-intel
+elif [ "$VGA" == "nvidia" ]; then
+   $INSTALL nvidia
+elif [ "$VGA" == "amd" ]; then
+   $INSTALL xf86-video-amdgpu
+   $INSTALL xf86-video-ati
+fi
+
+# configure graphics drivers 
+
+# setup gui
+$INSTALL xorg
+$INSTALL lxsession
+$INSTALL openbox
+$INSTALL xorg-xinit 
+$INSTALL xorg-server # not sure if necessary
+$INSTALL xorg-drivers # bonus video drivers
+$INSTALL lxqt # desktop environment
+$INSTALL slim # desktop manager
+$INSTALL slim-themes # additional themes for SLiM
+sudo pacman -S hwinfo
+
+systemctl enable slim.service #enables slim at boot
+
+sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
+
+echo "#!/bin/bash " >> ~/.xinitrc
+
+echo "if [ -d /etc/X11/xinit/xinitrc ]; then" >> ~/.xinitrc
+echo '   for f in /etc/X11/xinit/xinitrc.d/*; do' >> ~/.xinitrc
+echo '      [ -x "$f" ] && . "$f"' >> ~/.xinitrc
+echo '   done' >> ~/.xinitrc
+echo '   unset f' >> ~/.xinitrc
+echo "fi" >> ~/.xinitrc
+
+echo "exec startlxqt" >> ~/.xinitrc 
+
+
+
+#**************************************************************
+# OPTIONAL PACKAGES
+#
+if [ -z "$GNOME_YES" ];then
+   echo "Skipping gnome packages"
+else
+   echo "Intalling gnome packages"
+   sudo pacman -S gnome # install gnome applications
+fi
+if [ -z "$GNOME_EXTRAS_YES" ];then
+   echo "Skipping gnome extra packages"
+else
+   echo "Intalling gnome extra packages"
+   sudo pacman -S gnome-extra # install more gnome applications
+fi
+if [ -z "$WINE" ];then
+   echo "Skipping wine packages"
+else
+   echo "Intalling wine (wine-staging) packages"
+   #enable multilib
+   sed -i -e 's/#[multilib]/[multilib]/g' /etc/pacman.conf
+   sed -i -e 's/#Include = \/etc\/pacman.d\/mirrorlist/Include = \/etc\/pacman.d\/mirrorlist/g' /etc/pacman.conf
+   $INSTALL wine-staging # install gnome applications
+   $INSTALL wine-mono
+   $INSTALL wine_gecko
+fi
+
+
+
+
