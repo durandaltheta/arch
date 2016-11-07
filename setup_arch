@@ -179,8 +179,8 @@ if [ -z "$WINE" ];then
 else
    echo "Intalling wine (wine-staging) packages"
    #enable multilib
-   sed -i -e 's/#[multilib]/[multilib]/g' /etc/pacman.conf
-   sed -i -e 's/#Include = \/etc\/pacman.d\/mirrorlist/Include = \/etc\/pacman.d\/mirrorlist/g' /etc/pacman.conf
+   echo '[multilib]' >> /etc/pacman.conf
+   echo 'Include = \/etc\/pacman.d\/mirrorlist' >> /etc/pacman.conf
    $INSTALL wine-staging # install gnome applications
    $INSTALL wine-mono
    $INSTALL wine_gecko
