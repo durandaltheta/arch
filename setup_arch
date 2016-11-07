@@ -180,7 +180,7 @@ else
    echo "Intalling wine (wine-staging) packages"
    #enable multilib
    echo '[multilib]' >> /etc/pacman.conf
-   echo 'Include = \/etc\/pacman.d\/mirrorlist' >> /etc/pacman.conf
+   echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
    $INSTALL wine-staging # install gnome applications
    $INSTALL wine-mono
    $INSTALL wine_gecko
