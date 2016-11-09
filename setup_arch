@@ -167,12 +167,11 @@ if [ "$BASIC" == "TRUE" ]; then
 
    echo "setting up gui"
    $INSTALL xorg
-   $INSTALL lxsession
-   $INSTALL openbox
    $INSTALL xorg-xinit 
    $INSTALL xorg-server # not sure if necessary
    $INSTALL xorg-drivers # bonus video drivers
    $INSTALL lxqt # desktop environment
+   $INSTALL oxygen-icons # default icon theme
    $INSTALL slim # desktop manager
    $INSTALL slim-themes # additional themes for SLiM
    sudo pacman -S hwinfo
