@@ -140,17 +140,10 @@ if [ "$BASIC" == "TRUE" ]; then
    #$INSTALL git # we assume this
 
 
-   echo "setting up configure environment"
-   su $USER
-   cd ~
-   git clone https://github.com/durandaltheta/vim
-   ./vim/vimfiles/install.sh # install custom vim settings
-   echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
-
    echo "setting up VBox guest PACKAGES"
    if [ "$VBOX" == "TRUE" ]; then
-      pacman -S virtualbox-guest-utils
-      pacman -S virtualbox-guest-modules-arch 
+      $INSTALL virtualbox-guest-utils
+      $INSTALL virtualbox-guest-modules-arch 
       systemctl enable vboxservice.service
    fi 
 
@@ -177,6 +170,13 @@ if [ "$BASIC" == "TRUE" ]; then
    sudo pacman -S hwinfo
 
    systemctl enable slim.service #enables slim at boot
+
+   echo "setting up configure environment"
+   su $USER
+   cd ~
+   git clone https://github.com/durandaltheta/vim
+   ./vim/vimfiles/install.sh # install custom vim settings
+   echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
 
    sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
 
