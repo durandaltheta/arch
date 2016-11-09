@@ -22,16 +22,20 @@ key="$1"
 case $key in 
    -b|--basic)
    BASIC="TRUE"
+   ;;
    -u|--user)
    USER="$2"
+   echo "USER:""$2"
    shift
    ;;
    -p|--pass)
    PASS="$2"
+   echo "PASS:""$2"
    shift
    ;;
    -i|--interface)
    INTERFACE="$2"
+   echo "INTERFACE:""$2"
    shift
    ;;
    --gnome)
@@ -58,6 +62,7 @@ case $key in
    echo "Invalid argument ""$2"
    ;;
 esac
+shift
 done
 
 INSTALL_ARGS="-S --noconfirm"
@@ -92,6 +97,29 @@ fi
 # SETUP BASIC ENVIRONMENT
 #
 if [ "$BASIC" == "TRUE" ]; then
+   # Error checking
+   if [ -z "$USER" ];
+   then
+      echo "must provide username"
+      USAGE
+      exit
+   fi
+
+   if [ -z "$PASS" ];
+   then
+      echo "must provide password"
+      USAGE
+      exit
+   fi
+
+   if [ -z "$INTERFACE" ];
+   then
+      echo "must provide network interface"
+      echo "Use the command 'ip link' (without quotes) to list available interfaces."
+      USAGE
+      exit
+   fi 
+
    echo "setting up basic evironment"
    dhcpcd "$INTERFACE"
 
@@ -113,8 +141,10 @@ if [ "$BASIC" == "TRUE" ]; then
 
 
    echo "setting up configure environment"
+   su $USER
+   cd ~
    git clone https://github.com/durandaltheta/vim
-   /home/$USER/vim/vimfiles/install.sh # install custom vim settings
+   ./vim/vimfiles/install.sh # install custom vim settings
    echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
 
    echo "setting up VBox guest PACKAGES"
