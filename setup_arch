@@ -101,7 +101,7 @@ if [ "$BASIC" == "TRUE" ]; then
    $INSTALL sudo
    useradd -m -G wheel -s /bin/bash "$USER"
    echo '"$USER":"$PASS"' | chpasswd
-   "$USER" ALL=(ALL) ALL
+   echo '"$USER" ALL=(ALL) ALL' >> /etc/sudoers
 
 
    echo "install basic usability packages"
