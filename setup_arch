@@ -65,7 +65,8 @@ esac
 shift
 done
 
-INSTALL_ARGS="-S --noconfirm"
+#INSTALL_ARGS="-S --noconfirm"
+INSTALL_ARGS="-S"
 INSTALL="pacman "$INSTALL_ARGS
 
 
@@ -190,6 +191,10 @@ if [ "$BASIC" == "TRUE" ]; then
    echo "fi" >> /home/"$USER"/.xinitrc
 
    echo "exec startlxqt" >> /home/"$USER"/.xinitrc 
+
+
+
+   chown -R "$USER":"$USER" /home/"$USER"
 fi
 
 
