@@ -128,8 +128,8 @@ if [ "$BASIC" == "TRUE" ]; then
    echo "setting up user"
    $INSTALL sudo
    useradd -m -G wheel -s /bin/bash "$USER"
-   echo '"$USER":"$PASS"' | chpasswd
-   echo '"$USER" ALL=(ALL) ALL' >> /etc/sudoers
+   echo "$USER:$PASS" | chpasswd
+   echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
 
 
    echo "install basic usability packages"
@@ -167,14 +167,15 @@ if [ "$BASIC" == "TRUE" ]; then
    $INSTALL oxygen-icons # default icon theme
    $INSTALL slim # desktop manager
    $INSTALL slim-themes # additional themes for SLiM
-   sudo pacman -S hwinfo
+   $INSTALL hwinfo
 
    systemctl enable slim.service #enables slim at boot
 
    echo "configuring environment"
    cd /home/"$USER"
    git clone https://github.com/durandaltheta/vim
-   ./vim/vimfiles/install.sh # install custom vim settings
+   cd vim/vimfiles/
+   ./install.sh # install custom vim settings
    echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
 
    sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
