@@ -175,7 +175,7 @@ if [ "$BASIC" == "TRUE" ]; then
    cd /home/"$USER"
    git clone https://github.com/durandaltheta/vim
    cd vim/vimfiles/
-   ./install.sh # install custom vim settings
+   ./install.sh $USER # install custom vim settings
    echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
 
    sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
