@@ -205,6 +205,7 @@ else
     $INSTALL oxygen-icons # default icon theme
     $INSTALL slim # desktop manager
     $INSTALL slim-themes # additional themes for SLiM
+    $INSTALL lxrandr
     $INSTALL hwinfo
 
     systemctl enable slim.service #enables slim at boot
