@@ -30,7 +30,7 @@ FIX_OWNER( )
 }
 
 # parse arguments and setup variables
-while [[ $# -gt 1 ]]
+while [[ $# -gt 0 ]]
 do
     key="$1"
 
