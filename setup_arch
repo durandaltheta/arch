@@ -132,10 +132,12 @@ if [ "$BASIC" == "TRUE" ]; then
         echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
 
         echo "install basic usability packages"
-        $INSTALL git # repository management
-        $INSTALL vim # text editor
-        $INSTALL gcc # c/c++ compiler
-        $INSTALL make # basic build system 
+        $INSTALL --noconfirm git # repository management
+        $INSTALL --noconfirm vim # text editor
+        $INSTALL --noconfirm gcc # c/c++ compiler
+        $INSTALL --noconfirm make # basic build system 
+        $INSTALL --noconfirm cmake # common build control system 
+        $INSTALL --noconfirm --needed base-devel # used for installing alternative packages
 
         echo "configuring environment"
         cd /home/"$USER"
@@ -143,6 +145,20 @@ if [ "$BASIC" == "TRUE" ]; then
         cd vim/vimfiles/
         ./install.sh $USER # install custom vim settings
         echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+
+        #--- bonus usability scripts
+        # update arch linux
+        echo "#!/bin/bash" > /usr/local/bin/linux_update
+        echo "pacman -Syu" >> /usr/local/bin/linux_update 
+        chmod +x /usr/local/bin/linux_update
+
+        # install non pacman package
+        echo "#!/bin/bash" > /usr/local/bin/install_pkg
+        echo "git clone https://aur.archlinux.org/$1.git" >> /usr/local/bin/install_pkg
+        echo "cd $1" >> /usr/local/bin/install_pkg 
+        echo "makepkg -sirc" >> /usr/local/bin/install_pkg
+        echo "cd ..; rm -rf $1" >> /usr/local/bin/install_pkg
+        chmod +x /usr/local/bin/install_pkg
 
         FIX_OWNER "$USER"
     fi 
