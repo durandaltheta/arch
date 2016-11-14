@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Default install execution string for Arch Virtual Machine:
+# ./setup_arch -s [/dev/myharddrive] -r [rootpass] --region_city [Region/City] -b -u [username] -p [userpass] -i [net interface] -g --guest --wine 
+#
+# example:
+# ./setup_arch -s /dev/sda -r "fakepass" --region_city "America/Detroit" -b -u duran -p "myfakepass" -i "enp0s3" -g --guest --wine
 if [ "$EUID" -ne 0 ];
 then 
     echo "Must run as root"
@@ -18,9 +23,23 @@ lecho( )
 USAGE( )
 {
     echo "$0 valid arguments"
+    echo "   -s|--setup [hard drive to install to]: setup drive and install basic arch linux packages."
+    echo "          This must be run from the Arch install iso level."
+    echo "   -r|--root_pass [root password]: set the root password (required for --setup)"
+    echo "   --region_city [Region/City]: Example \"America/Detroit\" (required for --setup)"
+    echo "   -b|--basic: setup basic environment and usability programs"
     echo "   -u|--user [username]"
     echo "   -p|--pass [password]"
     echo "   -i|--interface [network interface]"
+    echo "   -g|--gui: install the lxqt gui environment"
+    echo "   --gnome: install the default gnome project applications"
+    echo "   --gnome_extras: install even more gnome project applications"
+    echo "   --wine: install wine staging for windows environment emulations"
+    echo "   -v|--vga [intel/amd/nvidia]: install specific graphics drivers"
+    echo "   --guest: install virtualbox guest utilities to install a bunch of drivers for a guest Arch VM"
+    echo "   -l|--log [log path/name]: set the logfile #CURRENTLY A STUB"
+
+
     echo ""
 } 
 
@@ -29,58 +48,91 @@ FIX_OWNER( )
     chown -R "$1":"$1" /home/"$1"
 }
 
+SCRIPT_NAME=$0
+EXEC_STR=$0
+
 # parse arguments and setup variables
 while [[ $# -gt 0 ]]
 do
     key="$1"
 
     case $key in 
+        -s|--setup) # setup and install to given hard driver
+            EXEC_STR="$EXEC_STR -s $2"            
+            DRIVE=$2
+            echo "DRIVE:$DRIVE"
+            shift 
+            ;;
+        -r|--root_pass) # give root password 
+            EXEC_STR="$EXEC_STR -r $2" 
+            RPASS=$2 
+            echo "RPASS:$RPASS"
+            shift
+            ;;
+        --post_setup) # useful for passing same arguments from install image script instance to /mnt 
+            EXEC_STR="$EXEC_STR --post_setup" 
+            POST="TRUE"
+            ;;
+        --region_city) # for setting up user's region/city locale
+            REG_CITY=$2
+            shift
+            ;;
         -b|--basic)
+            EXEC_STR="$EXEC_STR -b $2"   
             BASIC="TRUE"
             ;;
         -u|--user)
+            EXEC_STR="$EXEC_STR -u $2"            
             USER="$2"
             echo "USER:""$2"
             shift
             ;;
         -p|--pass)
+            EXEC_STR="$EXEC_STR -p $2"            
             PASS="$2"
             echo "PASS:""$2"
             shift
             ;;
         -i|--interface)
+            EXEC_STR="$EXEC_STR -i $2"            
             INTERFACE="$2"
             echo "INTERFACE:""$2"
             shift
             ;;
         -g|--gui)
+            EXEC_STR="$EXEC_STR -g $2"            
             GUI="TRUE"
             ;;
         --gnome)
-            GNOME_YES="$2"
-            shift
+            EXEC_STR="$EXEC_STR --gnome"            
+            GNOME_YES="TRUE"
             ;;
         --gnome_extras)
-            GNOME_EXTRAS_YES="$2"
-            shift
+            EXEC_STR="$EXEC_STR --gnome_extras"            
+            GNOME_EXTRAS_YES="TRUE"
             ;;
         --wine)
+            EXEC_STR="$EXEC_STR --wine"            
             WINE="TRUE"
             ;;
         -v|--vga) # set graphics driver
+            EXEC_STR="$EXEC_STR -v $2"            
             if [ -z "$VGA" ]; then
                 VGA="$2"
             fi
             shift
             ;;
         --guest) # configure as a virtual machine (vbox) guest
+            EXEC_STR="$EXEC_STR --guest"            
             VBOX="TRUE"
             ;;
         -l|--log)
+            EXEC_STR="$EXEC_STR -l $2"
             LOG=$2
             shift
             ;;
         *)
+            EXEC_STR="$EXEC_STR $2"
             echo "Invalid argument ""$2"
             ;;
     esac
@@ -91,7 +143,9 @@ done
 INSTALL_ARGS="-S"
 INSTALL="pacman "$INSTALL_ARGS
 
-
+if [ -z "$DRIVE" ]; then
+    POST="TRUE" # no (or already completed) basic install so we're good to do the rest of the install 
+fi
 
 # Error checking
 if [ -z "$USER" ];
@@ -109,150 +163,214 @@ then
 fi
 
 #**************************************************************
-# SETUP BASIC ENVIRONMENT
+# SETUP HARD DRIVE AND INSTALL BASE ARCH
 #
-if [ "$BASIC" == "TRUE" ]; then
-    # Error checking
-    if [ -z "$INTERFACE" ];
-    then
-        echo "must provide network interface"
-        echo "Use the command 'ip link' (without quotes) to list available interfaces."
+if [ -z "$DRIVE" ]; then
+    echo "Skipping initial setup & install"
+else 
+    if [ -z "$RPASS" ]; then 
+        echo "Must provide root password with -r|--root_pass) argument"
         USAGE
         exit
-    else
-        echo "setting up basic evironment"
-        dhcpcd "$INTERFACE"
+    fi  
 
-        systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
+    if [ -z "$REG_CITY" ]; then 
+        echo "Must provide Region/City with --region_city) argument"
+        USAGE
+        echo
+    fi
 
-        echo "setting up user"
-        $INSTALL sudo
-        useradd -m -G wheel -s /bin/bash "$USER"
-        echo "$USER:$PASS" | chpasswd
-        echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
-
-        echo "install basic usability packages"
-        $INSTALL --noconfirm git # repository management
-        $INSTALL --noconfirm vim # text editor
-        $INSTALL --noconfirm gcc # c/c++ compiler
-        $INSTALL --noconfirm make # basic build system 
-        $INSTALL --noconfirm cmake # common build control system 
-        $INSTALL --noconfirm --needed base-devel # used for installing alternative packages
-
-        echo "configuring environment"
-        cd /home/"$USER"
-        git clone https://github.com/durandaltheta/vim
-        cd vim/vimfiles/
-        ./install.sh $USER # install custom vim settings
-        echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
-
-        #--- bonus usability scripts
-        # update arch linux
-        echo "#!/bin/bash" > /usr/local/bin/linux_update
-        echo "pacman -Syu" >> /usr/local/bin/linux_update 
-        chmod +x /usr/local/bin/linux_update
-
-        # install non pacman package
-        echo "#!/bin/bash" > /usr/local/bin/install_pkg
-        echo "git clone https://aur.archlinux.org/$1.git" >> /usr/local/bin/install_pkg
-        echo "cd $1" >> /usr/local/bin/install_pkg 
-        echo "makepkg -sirc" >> /usr/local/bin/install_pkg
-        echo "cd ..; rm -rf $1" >> /usr/local/bin/install_pkg
-        chmod +x /usr/local/bin/install_pkg
-
-        FIX_OWNER "$USER"
-    fi 
-fi
-
-
-#**************************************************************
-# OPTIONAL PACKAGES
-#
-
-if [ -z "$VBOX" ]; then
-    echo "Skipping setting up VBox guest packages"
-else 
-    echo "Setting up VBox guest PACKAGES"
-    if [ "$VBOX" == "TRUE" ]; then
-        $INSTALL virtualbox-guest-utils
-        systemctl enable vboxservice.service
-    fi 
-fi
-
-if [ -z "$VGA" ]; then
-    echo "Skipping graphics driver packages"
-else
-    echo "Setting up graphics drivers"
-    if [ "$VGA" == "intel" ]; then
-        $INSTALL xf86-video-intel
-    elif [ "$VGA" == "nvidia" ]; then
-        $INSTALL nvidia
-    elif [ "$VGA" == "amd" ]; then
-        $INSTALL xf86-video-amdgpu
-        $INSTALL xf86-video-ati
+    if [ -z "$POST" ]; then # we're still on the first stage of the script
+        timedatectl set-ntp TRUE
+        echo -e "o\nn\np\n1\n\n\nw" | fdisk $DRIVE #partition hard drive from /dev
+        PART="$DISK""1" # the created partition
+        mkfs.ext4 "$PART"
+        mount "$PART" /mnt
+        pacstrap /mnt base
+        genfstab -U /mnt >> /mnt/etc/fstab 
+        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+        cp "$SCRIPT_DIR"/"$SCRIPT_NAME" /mnt
+        arch-chroot /mnt "$EXEC_STR --post_setup"
     fi
 fi
 
-if [ -z "$GUI" ];then
-    echo "Skipping gui packages"
-else 
-    echo "Setting up gui"
-    $INSTALL xorg-server # not sure if necessary
-    $INSTALL xorg-server-utils
-    $INSTALL xorg-xinit 
-    $INSTALL xorg-drivers # bonus video drivers
-    $INSTALL lxqt # desktop environment
-    $INSTALL oxygen-icons # default icon theme
-    $INSTALL slim # desktop manager
-    $INSTALL slim-themes # additional themes for SLiM
-    $INSTALL lxrandr
-    $INSTALL hwinfo
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# POST INSTALL
+#
 
-    systemctl enable slim.service #enables slim at boot
+if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the script, ok to continue
 
-    $INSTALL chromium # chrome base browser
+    #**************************************************************
+    # COMPLETING BASIC INSTALL
+    #
+    if [ -z "$DRIVE" ]; then
+        echo "Skipping secondary install"
+    else 
+        ln -s /usr/share/zoneinfo/"$REG_CITY" /etc/localtime 
+        hwclock --systohc
+        sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen 
+        locale-gen 
+        echo "LANG=en_US.UTF-8" >> /etc/locale.conf 
+        echo "system_durandal" >> /etc/hostname 
+        mkinitcpio -p linux
+        echo "root|$RPASS" | chpasswd 
+        $INSTALL --noconfirm grub
+        grub-install --target=i386-pc $DRIVE 
+        grub-mkconfig -o /boot/grub/grub.cfg
+    fi
 
-    sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
+    #**************************************************************
+    # SETUP BASIC ENVIRONMENT 
+    #
+    if [ "$BASIC" == "TRUE" ]; then
+        # Error checking
+        if [ -z "$INTERFACE" ];
+        then
+            echo "must provide network interface"
+            echo "Use the command 'ip link' (without quotes) to list available interfaces."
+            USAGE
+            exit
+        else
+            echo "setting up basic evironment"
+            dhcpcd "$INTERFACE"
 
-    echo "#!/bin/bash " > /home/"$USER"/.xinitrc
+            systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
 
-    echo "if [ -d /etc/X11/xinit/xinitrc ]; then" >> /home/"$USER"/.xinitrc
-    echo '   for f in /etc/X11/xinit/xinitrc.d/*; do' >> /home/"$USER"/.xinitrc
-    echo '      [ -x "$f" ] && . "$f"' >> /home/"$USER"/.xinitrc
-    echo '   done' >> /home/"$USER"/.xinitrc
-    echo '   unset f' >> /home/"$USER"/.xinitrc
-    echo "fi" >> /home/"$USER"/.xinitrc
+            echo "setting up user"
+            $INSTALL sudo
+            useradd -m -G wheel -s /bin/bash "$USER"
+            echo "$USER:$PASS" | chpasswd
+            echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
 
-    echo "exec startlxqt" >> /home/"$USER"/.xinitrc 
+            echo "install basic usability packages"
+            $INSTALL --noconfirm git # repository management
+            $INSTALL --noconfirm vim # text editor
+            $INSTALL --noconfirm gcc # c/c++ compiler
+            $INSTALL --noconfirm make # basic build system 
+            $INSTALL --noconfirm cmake # common build control system 
+            $INSTALL --noconfirm --needed base-devel # used for installing alternative packages
 
-    FIX_OWNER "$USER"
-fi
+            echo "configuring environment"
+            cd /home/"$USER"
+            git clone https://github.com/durandaltheta/vim
+            cd vim/vimfiles/
+            ./install.sh $USER # install custom vim settings
+            echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
 
-#~~~ GNOME ~~~
-if [ -z "$GNOME_YES" ];then
-    echo "Skipping gnome packages"
-else
-    echo "Intalling gnome packages"
-    $INSTALL --noconfirm gnome # install gnome applications
+            #--- bonus usability scripts
+            # update arch linux
+            echo "#!/bin/bash" > /usr/local/bin/linux_update
+            echo "pacman -Syu" >> /usr/local/bin/linux_update 
+            chmod +x /usr/local/bin/linux_update
+
+            # install non pacman package
+            echo "#!/bin/bash" > /usr/local/bin/install_pkg
+            echo "git clone https://aur.archlinux.org/$1.git" >> /usr/local/bin/install_pkg
+            echo "cd $1" >> /usr/local/bin/install_pkg 
+            echo "makepkg -sirc" >> /usr/local/bin/install_pkg
+            echo "cd ..; rm -rf $1" >> /usr/local/bin/install_pkg
+            chmod +x /usr/local/bin/install_pkg
+
+            FIX_OWNER "$USER"
+        fi 
+    fi
+
+
+    #**************************************************************
+    # OPTIONAL PACKAGES
+    #
+
+    #~~~ VBOX ~~~
+    if [ -z "$VBOX" ]; then
+        echo "Skipping setting up VBox guest packages"
+    else 
+        echo "Setting up VBox guest PACKAGES"
+        if [ "$VBOX" == "TRUE" ]; then
+            $INSTALL virtualbox-guest-utils
+            systemctl enable vboxservice.service
+        fi 
+    fi
+
+    #~~~ VGA ~~~
+    if [ -z "$VGA" ]; then
+        echo "Skipping graphics driver packages"
+    else
+        echo "Setting up graphics drivers"
+        if [ "$VGA" == "intel" ]; then
+            $INSTALL xf86-video-intel
+        elif [ "$VGA" == "nvidia" ]; then
+            $INSTALL nvidia
+        elif [ "$VGA" == "amd" ]; then
+            $INSTALL xf86-video-amdgpu
+            $INSTALL xf86-video-ati
+        fi
+    fi
+
+    #~~~ GUI ~~~
+    if [ -z "$GUI" ];then
+        echo "Skipping gui packages"
+    else 
+        echo "Setting up gui"
+        $INSTALL xorg-server # not sure if necessary
+        $INSTALL xorg-server-utils
+        $INSTALL xorg-xinit 
+        $INSTALL xorg-drivers # bonus video drivers
+        $INSTALL lxqt # desktop environment
+        $INSTALL oxygen-icons # default icon theme
+        $INSTALL slim # desktop manager
+        $INSTALL slim-themes # additional themes for SLiM
+        $INSTALL lxrandr
+        $INSTALL hwinfo
+
+        systemctl enable slim.service #enables slim at boot
+
+        $INSTALL chromium # chrome base browser
+
+        sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
+
+        echo "#!/bin/bash " > /home/"$USER"/.xinitrc
+
+        echo "if [ -d /etc/X11/xinit/xinitrc ]; then" >> /home/"$USER"/.xinitrc
+        echo '   for f in /etc/X11/xinit/xinitrc.d/*; do' >> /home/"$USER"/.xinitrc
+        echo '      [ -x "$f" ] && . "$f"' >> /home/"$USER"/.xinitrc
+        echo '   done' >> /home/"$USER"/.xinitrc
+        echo '   unset f' >> /home/"$USER"/.xinitrc
+        echo "fi" >> /home/"$USER"/.xinitrc
+
+        echo "exec startlxqt" >> /home/"$USER"/.xinitrc 
+
+        FIX_OWNER "$USER"
+    fi
+
+    #~~~ GNOME ~~~
+    if [ -z "$GNOME_YES" ];then
+        echo "Skipping gnome packages"
+    else
+        echo "Intalling gnome packages"
+        $INSTALL --noconfirm gnome # install gnome applications
+    fi 
+
+    #~~~ GNOME-EXTRAS ~~~
+    if [ -z "$GNOME_EXTRAS_YES" ];then
+        echo "Skipping gnome extra packages"
+    else
+        echo "Intalling gnome extra packages"
+        $INSTALL --noconfirm gnome-extra # install more gnome applications
+    fi
+
+    #~~~ WINE ~~~
+    if [ -z "$WINE" ];then
+        echo "Skipping wine packages"
+    else
+        echo "Intalling wine (wine-staging) packages"
+        #enable multilib
+        echo '[multilib]' >> /etc/pacman.conf
+        echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
+        $INSTALL --noconfirm wine-staging # install gnome applications
+        $INSTALL --noconfirm wine-mono
+        $INSTALL --noconfirm wine_gecko
+    fi
 fi 
 
-#~~~ GNOME-EXTRAS ~~~
-if [ -z "$GNOME_EXTRAS_YES" ];then
-    echo "Skipping gnome extra packages"
-else
-    echo "Intalling gnome extra packages"
-    $INSTALL --noconfirm gnome-extra # install more gnome applications
-fi
-
-#~~~ WINE ~~~
-if [ -z "$WINE" ];then
-    echo "Skipping wine packages"
-else
-    echo "Intalling wine (wine-staging) packages"
-    #enable multilib
-    echo '[multilib]' >> /etc/pacman.conf
-    echo 'Include = /etc/pacman.d/mirrorlist' >> /etc/pacman.conf
-    $INSTALL --noconfirm wine-staging # install gnome applications
-    $INSTALL --noconfirm wine-mono
-    $INSTALL --noconfirm wine_gecko
-fi
+echo "COMPLETED SETUP ... EXITING"
+reboot
