@@ -74,6 +74,7 @@ do
             POST="TRUE"
             ;;
         --region_city) # for setting up user's region/city locale
+            EXEC_STR="$EXEC_STR --region_city $2"            
             REG_CITY=$2
             shift
             ;;
