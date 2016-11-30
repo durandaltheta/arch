@@ -49,7 +49,7 @@ FIX_OWNER( )
 }
 
 SCRIPT_NAME=`basename "$0"`
-EXEC_STR=$0
+EXEC_STR="/""$SCRIPT_NAME"" "
 
 # parse arguments and setup variables
 while [[ $# -gt 0 ]]
