@@ -246,7 +246,7 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
             systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
 
             echo "setting up user"
-            $INSTALL sudo
+            $INSTALL --noconfirm sudo
             useradd -m -G wheel -s /bin/bash "$USER"
             echo "$USER:$PASS" | chpasswd
             echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
@@ -295,7 +295,7 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
     else 
         echo "Setting up VBox guest PACKAGES"
         if [ "$VBOX" == "TRUE" ]; then
-            $INSTALL virtualbox-guest-utils
+            echo "2\ny" | $INSTALL virtualbox-guest-utils
             systemctl enable vboxservice.service
         fi 
     fi
@@ -320,20 +320,26 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
         echo "Skipping gui packages"
     else 
         echo "Setting up gui"
-        $INSTALL xorg-server # not sure if necessary
-        $INSTALL xorg-server-utils
-        $INSTALL xorg-xinit 
-        $INSTALL xorg-drivers # bonus video drivers
-        $INSTALL lxqt # desktop environment
-        $INSTALL oxygen-icons # default icon theme
-        $INSTALL slim # desktop manager
-        $INSTALL slim-themes # additional themes for SLiM
-        $INSTALL lxrandr
-        $INSTALL hwinfo
+        #Maybe I need to an alternate version of this depending on whether we are guests or not?
+        #echo "1\n1\ny" | $INSTALL xorg-server # not sure if necessary
+        if [ -z "$VBOX" ]; then
+            $INSTALL xorg-server # probably necessary
+        else 
+            $INSTALL xorg-server # probably necessary
+        fi
+        $INSTALL --noconfirm xorg-server-utils
+        $INSTALL --noconfirm xorg-xinit 
+        echo "\ny" | $INSTALL xorg-drivers # bonus video drivers
+        echo "\n\ny" | $INSTALL lxqt # desktop environment
+        $INSTALL --noconfirm oxygen-icons # default icon theme
+        $INSTALL --noconfirm slim # desktop manager
+        $INSTALL --noconfirm slim-themes # additional themes for SLiM
+        $INSTALL --noconfirm lxrandr
+        $INSTALL --noconfirm hwinfo
 
         systemctl enable slim.service #enables slim at boot
 
-        $INSTALL chromium # chrome base browser
+        $INSTALL --noconfirm chromium # chrome base browser
 
         sed -i '84s/.*/current_theme\tarchlinux/' /etc/slim.conf # change to archlinux theme
 
@@ -382,4 +388,5 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
 fi 
 
 echo "COMPLETED SETUP ... EXITING"
+echo "Reboot to complete installation"
 #reboot
