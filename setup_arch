@@ -374,4 +374,4 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
 fi 
 
 echo "COMPLETED SETUP ... EXITING"
-reboot
+#reboot
