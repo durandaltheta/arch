@@ -48,6 +48,45 @@ FIX_OWNER( )
     chown -R "$1":"$1" /home/"$1"
 }
 
+ROOT_CHECK( )
+{
+   if [ -z "$PASS" ];
+   then
+       echo "must provide root password"
+       USAGE
+       exit
+   fi
+}
+
+USER_CHECK( )
+{
+   # Error checking
+   if [ -z "$USER" ];
+   then
+       echo "must provide username"
+       USAGE
+       exit
+   fi
+
+   if [ -z "$PASS" ];
+   then
+       echo "must provide password"
+       USAGE
+       exit
+   fi
+}
+
+INTERFACE_CHECK( )
+{
+   if [ -z "$INTERFACE" ];
+   then
+       echo "must provide network interface"
+       echo "Use the command 'ip link' (without quotes) to list available interfaces."
+       USAGE
+       exit
+   fi
+}
+
 SCRIPT_NAME=`basename "$0"`
 EXEC_STR="/""$SCRIPT_NAME"" "
 
@@ -148,20 +187,6 @@ if [ -z "$DRIVE" ]; then
     POST="TRUE" # no (or already completed) basic install so we're good to do the rest of the install 
 fi
 
-# Error checking
-if [ -z "$USER" ];
-then
-    echo "must provide username"
-    USAGE
-    exit
-fi
-
-if [ -z "$PASS" ];
-then
-    echo "must provide password"
-    USAGE
-    exit
-fi
 
 #**************************************************************
 # SETUP HARD DRIVE AND INSTALL BASE ARCH
@@ -215,6 +240,10 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
     if [ -z "$DRIVE" ]; then
         echo "Skipping secondary install"
     else 
+        # error checks
+        ROOT_CHECK # do we have root password?
+
+        # do stuff
         ln -s /usr/share/zoneinfo/"$REG_CITY" /etc/localtime 
         hwclock --systohc
         sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen 
@@ -232,56 +261,63 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
     # SETUP BASIC ENVIRONMENT 
     #
     if [ "$BASIC" == "TRUE" ]; then
-        # Error checking
-        if [ -z "$INTERFACE" ];
-        then
-            echo "must provide network interface"
-            echo "Use the command 'ip link' (without quotes) to list available interfaces."
-            USAGE
-            exit
-        else
-            echo "setting up basic evironment"
-            dhcpcd "$INTERFACE"
+        # Error checking 
+        USER_CHECK # do we have username and password?
+        INTERFACE_CHECK # do we have the ethernet interface? 
 
-            systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
+        # do stuff
+        echo "setting up basic evironment"
+        dhcpcd "$INTERFACE"
 
-            echo "setting up user"
-            $INSTALL --noconfirm sudo
-            useradd -m -G wheel -s /bin/bash "$USER"
-            echo "$USER:$PASS" | chpasswd
-            echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
+        systemctl enable dhcpcd@"$INTERFACE".service # permanently fix networking
 
-            echo "install basic usability packages"
-            $INSTALL --noconfirm git # repository management
-            $INSTALL --noconfirm vim # text editor
-            $INSTALL --noconfirm gcc # c/c++ compiler
-            $INSTALL --noconfirm make # basic build system 
-            $INSTALL --noconfirm cmake # common build control system 
-            $INSTALL --noconfirm --needed base-devel # used for installing alternative packages
+        echo "setting up user"
+        $INSTALL --noconfirm sudo
+        useradd -m -G wheel -s /bin/bash "$USER"
+        echo "$USER:$PASS" | chpasswd
+        echo "$USER ALL=(ALL) ALL" >> /etc/sudoers
 
-            echo "configuring environment"
-            cd /home/"$USER"
-            git clone https://github.com/durandaltheta/vim
-            cd vim/vimfiles/
-            ./install.sh $USER # install custom vim settings
-            echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+        echo "install basic usability packages"
+        $INSTALL --noconfirm git # repository management
+        $INSTALL --noconfirm vim # text editor
+        $INSTALL --noconfirm guake # drop down terminal 
+        $INSTALL --noconfirm gnome-terminal # generic terminal: most basic, reliable, maximully featured terminal
+        $INSTALL --noconfirm gcc # c/c++ compiler
+        $INSTALL --noconfirm make # basic build system 
+        $INSTALL --noconfirm cmake # common build control system 
+        $INSTALL --noconfirm --needed base-devel # used for installing alternative packages
 
-            #--- bonus usability scripts
-            # update arch linux
-            echo "#!/bin/bash" > /usr/local/bin/linux_update
-            echo "pacman -Syu" >> /usr/local/bin/linux_update 
-            chmod +x /usr/local/bin/linux_update
+        # configure the environment to be sane
+        echo "configuring environment"
+        cd /home/"$USER"
+        git clone https://github.com/durandaltheta/vim
+        cd vim/vimfiles/
+        ./install.sh $USER # install custom vim settings
 
-            # install non pacman package
-            echo "#!/bin/bash" > /usr/local/bin/install_pkg
-            echo "git clone https://aur.archlinux.org/$1.git" >> /usr/local/bin/install_pkg
-            echo "cd $1" >> /usr/local/bin/install_pkg 
-            echo "makepkg -sirc" >> /usr/local/bin/install_pkg
-            echo "cd ..; rm -rf $1" >> /usr/local/bin/install_pkg
-            chmod +x /usr/local/bin/install_pkg
+        echo 'alias ll="ls -l"' >> /home/"$USER"/.bash_profile  
+        echo 'alias l="ls -F"' >> /home/"$USER"/.bash_profile
+        echo 'alias la="ls -a"' >> /home/"$USER"/.bash_profile
+        echo 'alias ll="ls -l"' >> /home/"$USER"/.bashrc
+        echo 'alias l="ls -F"' >> /home/"$USER"/.bashrc
+        echo 'alias la="ls -a"' >> /home/"$USER"/.bashrc
 
-            FIX_OWNER "$USER"
-        fi 
+        cp /usr/share/applications/guake.desktop /etc/xdg/autostart/ # autostart guake 
+
+        #--- bonus usability scripts
+        # update arch linux
+        echo "#!/bin/bash" > /usr/local/bin/linux_update
+        echo "pacman -Syu" >> /usr/local/bin/linux_update 
+        chmod +x /usr/local/bin/linux_update
+
+        # install non pacman package
+        echo "#!/bin/bash" > /usr/local/bin/install_pkg
+        echo "git clone https://aur.archlinux.org/$1.git" >> /usr/local/bin/install_pkg
+        echo "cd $1" >> /usr/local/bin/install_pkg 
+        echo "makepkg -sirc" >> /usr/local/bin/install_pkg
+        echo "cd ..; rm -rf $1" >> /usr/local/bin/install_pkg
+        chmod +x /usr/local/bin/install_pkg
+
+        FIX_OWNER "$USER"
     fi
 
 
@@ -337,8 +373,9 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
         $INSTALL --noconfirm oxygen-icons # default icon theme
         $INSTALL --noconfirm slim # desktop manager
         $INSTALL --noconfirm slim-themes # additional themes for SLiM
-        $INSTALL --noconfirm lxrandr
+        $INSTALL --noconfirm lxrandr # there are problems (as guest vm?) with standard screen size control
         $INSTALL --noconfirm hwinfo
+        hwinfo # run to set some things up
 
         systemctl enable slim.service #enables slim at boot
 
