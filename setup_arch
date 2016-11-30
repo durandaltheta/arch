@@ -184,7 +184,8 @@ else
     if [ -z "$POST" ]; then # we're still on the first stage of the script
         timedatectl set-ntp TRUE
         echo -e "o\nn\np\n1\n\n\nw" | fdisk $DRIVE #partition hard drive from /dev
-        PART="$DISK""1" # the created partition
+        PART="$DRIVE""1" # the created partition 
+        echo "PART:"$PART
         mkfs.ext4 "$PART"
         mount "$PART" /mnt
         pacstrap /mnt base
