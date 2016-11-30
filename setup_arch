@@ -192,6 +192,11 @@ else
         genfstab -U /mnt >> /mnt/etc/fstab 
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
         echo "SCRIPT_DIR:"$SCRIPT_DIR
+        if [ -z "$SCRIPT_DIR" ]; 
+        then
+           echo "No script directory, exitting"
+           exit 
+        fi
         cp "$SCRIPT_DIR"/"$SCRIPT_NAME" /mnt
         arch-chroot /mnt "$EXEC_STR --post_setup"
     fi
