@@ -191,6 +191,7 @@ else
         pacstrap /mnt base
         genfstab -U /mnt >> /mnt/etc/fstab 
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+        echo "SCRIPT_DIR:"$SCRIPT_DIR
         cp "$SCRIPT_DIR"/"$SCRIPT_NAME" /mnt
         arch-chroot /mnt "$EXEC_STR --post_setup"
     fi
