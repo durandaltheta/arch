@@ -295,7 +295,8 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
     else 
         echo "Setting up VBox guest PACKAGES"
         if [ "$VBOX" == "TRUE" ]; then
-            echo "2\ny" | $INSTALL virtualbox-guest-utils
+            #echo "2\ny" | $INSTALL virtualbox-guest-utils
+            $INSTALL virtualbox-guest-utils
             systemctl enable vboxservice.service
         fi 
     fi
@@ -329,8 +330,10 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
         fi
         $INSTALL --noconfirm xorg-server-utils
         $INSTALL --noconfirm xorg-xinit 
-        echo "\ny" | $INSTALL xorg-drivers # bonus video drivers
-        echo "\n\ny" | $INSTALL lxqt # desktop environment
+        #echo "\ny" | $INSTALL xorg-drivers # bonus video drivers
+        $INSTALL xorg-drivers # bonus video drivers
+        #echo "\n\ny" | $INSTALL lxqt # desktop environment
+        $INSTALL lxqt # desktop environment
         $INSTALL --noconfirm oxygen-icons # default icon theme
         $INSTALL --noconfirm slim # desktop manager
         $INSTALL --noconfirm slim-themes # additional themes for SLiM
