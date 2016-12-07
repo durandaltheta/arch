@@ -203,7 +203,7 @@ else
     if [ -z "$REG_CITY" ]; then 
         echo "Must provide Region/City with --region_city) argument"
         USAGE
-        echo
+        exit
     fi
 
     if [ -z "$POST" ]; then # we're still on the first stage of the script
