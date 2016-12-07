@@ -200,12 +200,6 @@ else
         exit
     fi  
 
-    if [ -z "$REG_CITY" ]; then 
-        echo "Must provide Region/City with --region_city) argument"
-        USAGE
-        exit
-    fi
-
     if [ -z "$POST" ]; then # we're still on the first stage of the script
         timedatectl set-ntp TRUE
         echo -e "o\nn\np\n1\n\n\nw" | fdisk $DRIVE #partition hard drive from /dev
@@ -239,6 +233,11 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
     #
     if [ -z "$DRIVE" ]; then
         echo "Skipping secondary install"
+    elif [ -z "$REG_CITY" ]; then 
+        echo "Must provide Region/City with --region_city) argument for basic install"
+        USAGE
+        exit
+    fi
     else 
         # error checks
         ROOT_CHECK # do we have root password?
