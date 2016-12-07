@@ -38,6 +38,14 @@ USAGE( )
     echo "   -v|--vga [intel/amd/nvidia]: install specific graphics drivers"
     echo "   --guest: install virtualbox guest utilities to install a bunch of drivers for a guest Arch VM"
     echo "   -l|--log [log path/name]: set the logfile #CURRENTLY A STUB"
+    echo ""
+    echo "example usage"
+    echo "-------------"
+    echo "\tfrom arch linux install iso welcome terminal:"
+    echo "\t$ ./setup_arch -r [root password] -s /dev/sda"
+    echo "\t$ arch-chroot /mnt /setup_arch -s /dev/sda -u duran -p [duran password] --region_city "America/Detroit" -i enp0s3 -b -g --guest --post_setup"
+    echo "\t"
+    echo "\t"
 
 
     echo ""
@@ -174,6 +182,7 @@ do
         *)
             EXEC_STR="$EXEC_STR $2"
             echo "Invalid argument ""$2"
+            USAGE
             ;;
     esac
     shift
