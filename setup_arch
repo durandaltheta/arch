@@ -311,6 +311,32 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
 
         cp /usr/share/applications/guake.desktop /etc/xdg/autostart/ # autostart guake 
 
+        # setup script to enable sharing
+        # will need to manually VirtualBox->Devices->Shared Folders->Shared Folders Settings and add 
+        # a new shared folder named "Documents" (typically assigned to "My Documents" in windows)
+        echo "#!/bin/bash" > /usr/local/bin/setup_share
+        echo "if [ "$#" -ne 2 ]; then" >> /usr/local/bin/setup_share
+        echo "\tUsage: setup_share [Shared folder name] [local mount directory]" >> /usr/local/bin/setup_share
+        echo "\texit"
+        echo "fi"
+        echo "mount -t vboxsf $1 $2"
+
+        mkdir -p /home/$USER/s 
+
+        echo "[Unit]" > /lib/systemd/system/setupshare.service
+        echo "Description=VirtualBox Setup Shared Folder Service" >> /lib/systemd/system/setupshare.service
+        echo "After=vboxservice.service" >> /lib/systemd/system/setupshare.service
+        echo "" >> /lib/systemd/system/setupshare.service
+        echo "[Service]" >> /lib/systemd/system/setupshare.service
+        echo "User=root" >> /lib/systemd/system/setupshare.service
+        echo "ExecStart=/usr/local/bin/setup_share Documents /home/$USER/s" >> /lib/systemd/system/setupshare.service
+        echo "" >> /lib/systemd/system/setupshare.service
+        echo "[Install]" >> /lib/systemd/system/setupshare.service
+        echo "WantedBy=multi-user.target" >> /lib/systemd/system/setupshare.service 
+
+        systemctl enable setupshare.service 
+
+
         #--- bonus usability scripts
         # update arch linux
         echo "#!/bin/bash" > /usr/local/bin/linux_update
@@ -402,32 +428,6 @@ if [ "$POST" == "TRUE" ]; then # we know we are in the /mnt version of the scrip
         echo "fi" >> /home/"$USER"/.xinitrc
 
         echo "exec startlxqt" >> /home/"$USER"/.xinitrc 
-
-        # setup script to enable sharing
-        # will need to manually VirtualBox->Devices->Shared Folders->Shared Folders Settings and add 
-        # a new shared folder named "Documents" (typically assigned to "My Documents" in windows)
-        echo "#!/bin/bash" > /usr/local/bin/setup_share
-        echo "if [ "$#" -ne 2 ]; then" >> /usr/local/bin/setup_share
-        echo "\tUsage: setup_share [Shared folder name] [local mount directory]" >> /usr/local/bin/setup_share
-        echo "\texit"
-        echo "fi"
-        echo "mount -t vboxsf $1 $2"
-
-        mkdir -p /home/$USER/s 
-
-        echo "[Unit]" > /lib/systemd/system/setupshare.service
-        echo "Description=VirtualBox Setup Shared Folder Service" >> /lib/systemd/system/setupshare.service
-        echo "After=vboxservice.service" >> /lib/systemd/system/setupshare.service
-        echo "" >> /lib/systemd/system/setupshare.service
-        echo "[Service]" >> /lib/systemd/system/setupshare.service
-        echo "User=root" >> /lib/systemd/system/setupshare.service
-        echo "ExecStart=/usr/local/bin/setup_share Documents /home/$USER/s" >> /lib/systemd/system/setupshare.service
-        echo "" >> /lib/systemd/system/setupshare.service
-        echo "[Install]" >> /lib/systemd/system/setupshare.service
-        echo "WantedBy=multi-user.target" >> /lib/systemd/system/setupshare.service 
-
-        systemctl enable setupshare.service 
-
 
         # fix ownsership of files
         FIX_OWNER "$USER"
