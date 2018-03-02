@@ -25,6 +25,8 @@ USAGE( )
     echo ""
 } 
 
+INTERN_SCRIPT="internal.sh"
+EXEC_STR="$INTERN_SCRIPT"
 # parse arguments and setup variables
 while [[ $# -gt 0 ]]
 do
@@ -105,5 +107,5 @@ then
    echo "No script directory, exitting"
    exit 
 fi
-cp "$SCRIPT_DIR"/install.sh /mnt
-arch-chroot /mnt "$EXEC_STR"
+cp "$SCRIPT_DIR"/"$INTERN_SCRIPT" /mnt
+arch-chroot /mnt ./"$EXEC_STR"
