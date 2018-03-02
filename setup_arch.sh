@@ -117,7 +117,7 @@ then
     echo "SCRIPT:$SCRIPT"
     echo "EXEC_STR:$EXEC_STR"
     cp $SCRIPT /mnt 
-    arch-chroot /mnt /mnt/"$EXEC_STR"
+    arch-chroot /mnt /"$EXEC_STR"
 else 
     # if --itern was set it's time to install custom packages and settings 
     
