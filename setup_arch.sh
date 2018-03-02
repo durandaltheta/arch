@@ -39,8 +39,7 @@ do
             exit 
             ;;
         --intern) # execute internal commands
-            INTERN=$2
-            shift 
+            INTERN="TRUE"
             ;;
         -d|--drive) # setup and install to given hard driver
             DRIVE=$2
@@ -117,7 +116,7 @@ then
     echo "SCRIPT:$SCRIPT"
     echo "EXEC_STR:$EXEC_STR"
     cp $SCRIPT /mnt 
-    arch-chroot /mnt "chmod +x ./$SCRIPT_NAME; ./$EXEC_STR"
+    arch-chroot /mnt chmod +x ./$SCRIPT_NAME; ./$EXEC_STR
 else 
     # if --itern was set it's time to install custom packages and settings 
     
