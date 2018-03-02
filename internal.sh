@@ -10,12 +10,11 @@ USAGE( )
     echo "   -u|--user [username]"
     echo "   -p|--pass [password]"
     echo "   -i|--interface [network interface]"
-    echo "   --wine: install wine staging for windows environment emulations"
     echo "   -v|--vga [intel/amd/nvidia]: install specific graphics drivers"
     echo ""
     echo "example usage"
     echo "-------------"
-    echo "\t$ ./install.sh -s /dev/sda -u duran -p [duran password] --region_city \"America/Detroit\" -i enp0s3"
+    echo "\t$ ./install.sh -d /dev/sda -u duran -p [duran password] --region_city \"America/Detroit\" -i enp0s3"
     echo ""
 } 
 
@@ -28,6 +27,10 @@ do
         -h|--help)
             USAGE
             exit 
+            ;;
+        --intern)
+            INTERN=$2
+            shift 
             ;;
         -d|--drive) # setup and install to given hard driver
             DRIVE=$2
