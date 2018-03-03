@@ -25,6 +25,7 @@ USAGE( )
 DRIVE="/dev/sda"
 REG_CITY="America/Detroit"
 INTERFACE="enp0s3" 
+VGA="intel"
 
 SCRIPT_NAME=`basename "$0"`
 EXEC_STR="$SCRIPT_NAME --intern"
@@ -43,42 +44,35 @@ do
             ;;
         -d|--drive) # setup and install to given hard driver
             DRIVE=$2
-            EXEC_STR="$EXEC_STR -d $DRIVE" 
             echo "DRIVE:$DRIVE"
             shift 
             ;;
         --region_city) # for setting up user's region/city locale
             REG_CITY=$2
-            EXEC_STR="$EXEC_STR --region_city $REG_CITY" 
             shift
             ;;
         -r|--root_pass) # give root password 
             RPASS=$2 
-            EXEC_STR="$EXEC_STR -r $RPASS" 
             echo "RPASS:$RPASS"
             shift
             ;;
         -u|--user)
             USER="$2"
-            EXEC_STR="$EXEC_STR -u $USER" 
             echo "USER:$USER"
             shift
             ;;
         -p|--pass)
             PASS="$2"
-            EXEC_STR="$EXEC_STR -p $PASS" 
             echo "PASS:$PASS"
             shift
             ;;
         -i|--interface)
             INTERFACE="$2"
-            EXEC_STR="$EXEC_STR -i $INTERFACE" 
             echo "INTERFACE:$INTERFACE"
             shift
             ;;
         -v|--vga) # set graphics driver
             VGA="$2"
-            EXEC_STR="$EXEC_STR -v $VGA"
             echo "VGA:$VGA"
             shift
             ;;
@@ -90,6 +84,40 @@ do
     esac
     shift
 done 
+
+#**************************************************************
+# ERROR CHECKING
+#
+# Root Check: do we have root password?
+if [ -z "$RPASS" ];
+then
+   echo "must provide root password"
+   USAGE
+   exit
+fi
+
+# User Check: do we have username and password?
+if [ -z "$USER" ];
+then
+   echo "must provide username"
+   USAGE
+   exit
+fi
+
+if [ -z "$PASS" ];
+then
+   echo "must provide user password"
+   USAGE
+   exit
+fi
+            
+EXEC_STR="$EXEC_STR -d $DRIVE" 
+EXEC_STR="$EXEC_STR --region_city $REG_CITY" 
+EXEC_STR="$EXEC_STR -r $RPASS" 
+EXEC_STR="$EXEC_STR -u $USER" 
+EXEC_STR="$EXEC_STR -p $PASS" 
+EXEC_STR="$EXEC_STR -i $INTERFACE" 
+EXEC_STR="$EXEC_STR -v $VGA"
 
 if [ -z "$INTERN" ]
 then
@@ -121,48 +149,6 @@ else
     # if --itern was set it's time to install custom packages and settings 
     
     INSTALL="pacman -S --noconfirm"
-
-    #**************************************************************
-    # ERROR CHECKING
-    #
-    # Root Check: do we have root password?
-    if [ -z "$RPASS" ];
-    then
-       echo "must provide root password"
-       USAGE
-       exit
-    fi
-
-    # User Check: do we have username and password?
-    if [ -z "$USER" ];
-    then
-       echo "must provide username"
-       USAGE
-       exit
-    fi
-
-    if [ -z "$PASS" ];
-    then
-       echo "must provide user password"
-       USAGE
-       exit
-    fi
-
-    # Interface Check: do we have the ethernet interface?
-    if [ -z "$INTERFACE" ];
-    then
-       echo "Must provide network interface"
-       echo "Use the command 'ip link' (without quotes) to list available interfaces."
-       USAGE
-       exit
-    fi 
-
-    # VGA Check: do we have the graphical driver type?
-    if [ -z "$VGA" ]; then
-        echo "Must select grapics driver package"
-        USAGE
-        exit
-    fi
 
 
     #**************************************************************
